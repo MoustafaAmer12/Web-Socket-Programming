@@ -1,101 +1,91 @@
 from socket import *
 import threading
+import time
 
-# Function to send a GET request to the server
-def send_get_request(host, port, file_path, client_id):
+def send_get_request(client_socket, path, client_id="TestClient"):
+    request = (
+        f"GET {path} HTTP/1.1\r\n"
+        f"Host: 127.0.0.1\r\n"
+        f"Client-ID: {client_id}\r\n"
+        f"Connection: keep-alive\r\n\r\n"
+    )
+    client_socket.sendall(request.encode('utf-8'))
+    response = client_socket.recv(4096).decode('utf-8')
+    print(f"{client_id} GET response:\n", response)
+
+def send_post_request(client_socket, path, data, client_id="TestClient"):
+    request = (
+        f"POST {path} HTTP/1.1\r\n"
+        f"Host: 127.0.0.1\r\n"
+        f"Client-ID: {client_id}\r\n"
+        f"Content-Length: {len(data)}\r\n"
+        f"Connection: keep-alive\r\n\r\n"
+    )
+    client_socket.sendall(request.encode('utf-8') + data)
+    response = client_socket.recv(4096).decode('utf-8')
+    print(f"{client_id} POST response:\n", response)
+
+def send_anonymous_request(client_socket, path, client_id):
+    request = (
+        f"RANDOM {path} HTTP/1.1\r\n"
+        f"Host: 127.0.0.1\r\n"
+        f"Client-ID: {client_id}\r\n"
+        f"Connection: keep-alive\r\n\r\n"
+    )
+    client_socket.sendall(request.encode('utf-8'))
+    response = client_socket.recv(4096).decode('utf-8')
+    print("Anonymous request response:\n", response)
+
+def client_sequence(client_id):
+    # Connect to the server
+    server_host = '127.0.0.1'
+    server_port = 8080
+    client_socket = socket(AF_INET, SOCK_STREAM)
+    client_socket.connect((server_host, server_port))
+    
     try:
-        with socket(AF_INET, SOCK_STREAM) as clientSocket:
-            # Connect to the server
-            clientSocket.connect((host, port))
-        
-            # Formulate the GET request
-            request = (f"GET /{file_path} HTTP/1.1\r\n"
-                       f"Host: {host}\r\n"
-                       f"Client-Id: {client_id}\r\n"
-                       f"Connection: keep-alive\r\n\r\n")
-            clientSocket.send(request.encode('utf-8'))
-        
-            # Managing Server's Long Response
-            response = ""
-            while True:
-                part = clientSocket.recv(4096).decode('utf-8')
-                if not part:
-                    break
-                response += part
+        # Send a GET request for an existing file
+        send_get_request(client_socket, "/get_test.txt", client_id)
 
-        print(f"Client {client_id} Response For GET:\n{response}\n" + "_"*50)
-
-    except Exception as e:
-        print(f"Client {client_id} encountered an error: {e}")
-
-# Function to send a POST request to the server
-def send_post_request(host, port, file_data, client_id):
-    with socket(AF_INET, SOCK_STREAM) as clientSocket:
-        # Connect to the server
-        clientSocket.connect((host, port))
+        # Wait briefly to simulate separate requests
+        time.sleep(1)
         
-        # Formulate the POST request
-        request = (f"POST / HTTP/1.1\r\n"
-                   f"Host: {host}\r\n"
-                   f"Client-Id: {client_id}\r\n"
-                   f"Connection: keep-alive\r\n\r\n")
-        clientSocket.send(request.encode('utf-8'))
-        
-        # Wait for the server's OK response
-        response = clientSocket.recv(1024).decode('utf-8')
-        print(f"Client {client_id} Response from server for POST:\n{response}\n" + "_"*50)
-        
-        # Send the file data
-        clientSocket.send(file_data.encode('utf-8'))
-        
-        # Optionally, receive the server's final acknowledgment or response (if implemented in the server)
-        response = clientSocket.recv(4096).decode('utf-8')
-        print(f"Client {client_id} - Response from server after sending file data:\n{response}\n" + "_"*50)
+        # Send a GET request for a non-existent file
+        send_get_request(client_socket, "/example.txt", client_id)
 
-
-def not_allowed(host, port, client_id):
-    with socket(AF_INET, SOCK_STREAM) as clientSocket:
-        # Connect to the server
-        clientSocket.connect((host, port))
+        # Wait briefly to simulate separate requests
+        time.sleep(1)
         
-        # Formulate the POST request
-        request = (f"random text for\r\n"
-                   f"not allowed method\r\n"
-                   f"Client-Id: {client_id}\r\n"
-                   f"Connection: keep-alive\r\n\r\n")
-        clientSocket.send(request.encode('utf-8'))
+        # Send a POST request with some data
+        data = b"Sample data for POST request."
+        send_post_request(client_socket, "/upload_file.txt", data, client_id)
+
+        # Wait briefly to simulate separate requests
+        time.sleep(1)
         
-        # Wait for the server's OK response
-        response = clientSocket.recv(1024).decode('utf-8')
-        print(f"Client {client_id} - Response from server for not allowed method:\n{response}\n"+ "_"*50)
+        # Send another GET request to ensure the connection persists
+        send_anonymous_request(client_socket, "/get_test.txt", client_id)
+    
+    finally:
+        # Close the connection
+        client_socket.close()
+        print(f"{client_id} connection closed.")
 
-
-# Function to start multiple client threads
-def run_threaded_requests(host, port, num_clients):
+def main():
+    # Number of client threads to simulate
+    num_clients = 5
     threads = []
+
     for i in range(num_clients):
-        # Initialize the client threads for GET, POST and not allowed requests
-        if i % 3 == 0:
-            file_path = "get_test.txt"
-            thread = threading.Thread(target=send_get_request, args=(host, port, file_path, i))
-        elif i % 3 == 1:
-            file_data = f"This is the content of the uploaded file from client {i}."
-            thread = threading.Thread(target=send_post_request, args=(host, port, file_data, i))
-        else:
-            file_data = f"This is not needed for client {i}."
-            thread = threading.Thread(target=not_allowed, args=(host, port, i))
-
-        thread.start()
+        client_id = f"Client-{i+1}"
+        thread = threading.Thread(target=client_sequence, args=(client_id,))
         threads.append(thread)
-
-    # Wait for all threads to finish
+        thread.start()
+    
+    # Wait for all threads to complete
     for thread in threads:
         thread.join()
-
+    print("All client threads completed.")
 
 if __name__ == "__main__":
-    host = "127.0.0.1"
-    port = 8080
-    num_clients = 10
-    
-    run_threaded_requests(host, port, num_clients)
+    main()
