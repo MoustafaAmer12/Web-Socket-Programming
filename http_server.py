@@ -1,19 +1,20 @@
 import socket
 import threading
 import os
+import mimetypes
+
 
 class SimpleHTTPServer:
-    def __init__(self, host='localhost', port=8080):
+    def __init__(self, host='localhost', port=8081):
         self.host = host
         self.port = port
-        self.timeout_idle = 10  # Default idle timeout (seconds)
-        self.timeout_busy = 5   # Shorter timeout for busy conditions (seconds)
-        self.connections = []   # Track active connections for dynamic timeout
-        self.lock = threading.Lock()  # Ensure thread-safe access to connections list
+        self.timeout_idle = 10  
+        self.timeout_busy = 5   
+        self.connections = []   
+        self.lock = threading.Lock()
 
     def handle_client(self, client_socket):
         with client_socket:
-            # Add client to active connections
             with self.lock:
                 self.connections.append(client_socket)
 
@@ -22,19 +23,15 @@ class SimpleHTTPServer:
             print(f"Timeout: {self.get_dynamic_timeout()}")
             try:
                 while True:
-                    # Set the timeout dynamically based on server load
                     client_socket.settimeout(self.get_dynamic_timeout())
                     try:
-                        # Receive client request
                         request = client_socket.recv(1024)
                         if not request:
                             break
 
-                        # Process and respond to the request
                         response = self.process_request(request)
                         client_socket.sendall(response)
 
-                        # Check if the client requested to close the connection
                         if b"Connection: close" in request:
                             break
 
@@ -45,7 +42,6 @@ class SimpleHTTPServer:
                         print(f"Error: {e}")
                         break
             finally:
-                # Remove client from active connections when done
                 with self.lock:
                     self.connections.remove(client_socket)
 
@@ -59,7 +55,6 @@ class SimpleHTTPServer:
         """Process a single HTTP request and return the response."""
         print("Received request:", request.decode())
         
-        # Parse the request line
         lines = request.decode().splitlines()
         if not lines:
             return self.build_response(400, "Bad Request")
@@ -67,29 +62,34 @@ class SimpleHTTPServer:
         request_line = lines[0]
         method, path, _ = request_line.split()[:3]
 
-        # Handle GET requests
         if method == "GET":
             return self.handle_get(path)
         
-        # Handle POST requests
         elif method == "POST":
             return self.handle_post()
         
-        # Method not allowed
         else:
             return self.build_response(405, "Method Not Allowed")
 
     def handle_get(self, path):
         """Handle GET requests by serving files or returning a 404."""
         if path == "/":
-            path = "/index.html"  # Default to index.html if root is requested
+            path = "/index.html"
 
-        # Check if the requested file exists
         filepath = "." + path
         if os.path.isfile(filepath):
-            with open(filepath, 'r') as f:
+            # Determine if the file should be read in binary mode
+            mime_type, _ = mimetypes.guess_type(filepath)
+            is_binary = mime_type and mime_type.startswith('image')
+            
+            # Read the file in binary or text mode based on its type
+            mode = 'rb' if is_binary else 'r'
+            with open(filepath, mode) as f:
                 body = f.read()
-            return self.build_response(200, "OK", body)
+
+            # Set the Content-Type header based on the file type
+            content_type = mime_type if mime_type else 'application/octet-stream'
+            return self.build_response(200, "OK", body, content_type)
         else:
             return self.build_response(404, "Not Found", "404 Not Found")
 
@@ -98,32 +98,33 @@ class SimpleHTTPServer:
         body = "POST request received"
         return self.build_response(200, "OK", body)
 
-    def build_response(self, status_code, status_text, body=""):
+    def build_response(self, status_code, status_text, body="", content_type="text/html"):
         """Construct an HTTP response based on the status code and body."""
+        if isinstance(body, str):
+            body = body.encode()  # Ensure the body is in bytes for binary compatibility
+
         response_lines = [
             f"HTTP/1.1 {status_code} {status_text}",
-            "Content-Type: text/html",
+            f"Content-Type: {content_type}",
             f"Content-Length: {len(body)}",
             "Connection: keep-alive",
             "",
-            body
+            ""
         ]
-        return "\r\n".join(response_lines).encode()
+        return "\r\n".join(response_lines).encode() + body
 
     def start(self):
         """Start the HTTP server."""
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_socket.bind((self.host, self.port))
-        server_socket.listen(5)
+        server_socket.listen(20)
         print(f"Serving on {self.host}:{self.port}")
 
         try:
             while True:
-                # Accept new client connections
                 client_socket, addr = server_socket.accept()
                 print(f"Connection from {addr}")
 
-                # Handle the client in a separate thread without immediate join
                 client_thread = threading.Thread(target=self.handle_client, args=(client_socket,))
                 client_thread.start()
 
