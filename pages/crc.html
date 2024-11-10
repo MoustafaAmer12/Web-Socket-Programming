@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRC Cards</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .crc-card {
+            width: 250px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .crc-card h3 {
+            background-color: #4CAF50;
+            color: white;
+            padding: 8px;
+            margin: -10px -10px 10px -10px;
+            text-align: center;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+        }
+        .section {
+            margin-bottom: 10px;
+        }
+        .section strong {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+        }
+        ul {
+            list-style-type: disc;
+            padding-left: 20px;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+
+<div class="crc-card">
+    <h3>Course</h3>
+    <div class="section">
+        <strong>Responsibilities:</strong>
+        <ul>
+            <li>Manage course information</li>
+            <li>Assign instructor to the course</li>
+            <li>Contain related assignments and quizzes</li>
+        </ul>
+    </div>
+    <div class="section">
+        <strong>Collaborators:</strong>
+        <ul>
+            <li>User (Instructor)</li>
+            <li>Assignment</li>
+            <li>Quiz</li>
+        </ul>
+    </div>
+</div>
+
+<div class="crc-card">
+    <h3>Assignment</h3>
+    <div class="section">
+        <strong>Responsibilities:</strong>
+        <ul>
+            <li>Store assignment details</li>
+            <li>Set weight and due date</li>
+            <li>Track student submissions</li>
+        </ul>
+    </div>
+    <div class="section">
+        <strong>Collaborators:</strong>
+        <ul>
+            <li>Course</li>
+            <li>StudentAssignmentSubmission</li>
+            <li>User (Instructor)</li>
+        </ul>
+    </div>
+</div>
+
+<div class="crc-card">
+    <h3>Quiz</h3>
+    <div class="section">
+        <strong>Responsibilities:</strong>
+        <ul>
+            <li>Store quiz details</li>
+            <li>Assign weight in course grade</li>
+            <li>Manage quiz questions</li>
+        </ul>
+    </div>
+    <div class="section">
+        <strong>Collaborators:</strong>
+        <ul>
+            <li>Course</li>
+            <li>QuizQuestion</li>
+            <li>StudentQuizSubmission</li>
+            <li>User (Instructor)</li>
+        </ul>
+    </div>
+</div>
+
+<div class="crc-card">
+    <h3>QuizQuestion</h3>
+    <div class="section">
+        <strong>Responsibilities:</strong>
+        <ul>
+            <li>Store individual question details</li>
+            <li>Store correct answer</li>
+        </ul>
+    </div>
+    <div class="section">
+        <strong>Collaborators:</strong>
+        <ul>
+            <li>Quiz</li>
+            <li>StudentQuizQuestionSubmission</li>
+        </ul>
+    </div>
+</div>
+
+<div class="crc-card">
+    <h3>StudentAssignmentSubmission</h3>
+    <div class="section">
+        <strong>Responsibilities:</strong>
+        <ul>
+            <li>Store student submission details</li>
+            <li>Record submission file URL</li>
+            <li>Store grade and feedback</li>
+        </ul>
+    </div>
+    <div class="section">
+        <strong>Collaborators:</strong>
+        <ul>
+            <li>Assignment</li>
+            <li>User (Student)</li>
+        </ul>
+    </div>
+</div>
+
+<div class="crc-card">
+    <h3>StudentQuizSubmission</h3>
+    <div class="section">
+        <strong>Responsibilities:</strong>
+        <ul>
+            <li>Store quiz submission details</li>
+            <li>Record grade and feedback</li>
+   

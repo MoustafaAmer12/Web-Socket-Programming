@@ -1,0 +1,4 @@
+client_get pages/crc.html
+client_get pages/dummy.png
+client_get pages/test.txt
+client_post pages/crc.html
