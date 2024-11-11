@@ -1,0 +1,4 @@
+client_post data/crc.html        # Test POST for an HTML file
+client_post data/dummy.png       # Test POST for an image file
+client_post data/test.txt        # Test POST for a text file
+client_post data/not_found.html  # Test POST for a non-existent file
