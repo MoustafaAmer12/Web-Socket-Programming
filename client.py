@@ -9,8 +9,17 @@ def create_request(command_type, file_path, host_name):
     if command_type == "client_get":
         return f"GET /{file_path} HTTP/1.1\r\nHost: {host_name}\r\nConnection: close\r\n\r\n"
     elif command_type == "client_post":
-        body = "name=example&value=test"
-        return f"POST /{file_path} HTTP/1.1\r\nHost: {host_name}\r\nContent-Length: {len(body)}\r\nConnection: close\r\n\r\n{body}"
+        with open(file_path, "rb") as f:
+            body = f.read()
+        headers = [
+            f"POST /{file_path} HTTP/1.1",
+            f"Host: {host_name}",
+            f"Content-Length: {len(body)}",
+            "Connection: close",
+            "",
+            ""
+        ]
+        return "\r\n".join(headers).encode() + body
     return ""
 
 def parse_command(line):
@@ -43,8 +52,14 @@ def handle_response(command_type, file_path, response):
 def execute_command(command_type, file_path, host_name, port):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((host_name, port))
+        
         request = create_request(command_type, file_path, host_name)
-        s.sendall(request.encode())
+        
+        # Send request directly if it's already bytes, otherwise encode it
+        if isinstance(request, str):
+            s.sendall(request.encode())
+        else:
+            s.sendall(request)
         
         response = b""
         while True:

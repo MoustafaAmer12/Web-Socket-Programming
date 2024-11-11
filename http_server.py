@@ -2,6 +2,7 @@ import socket
 import threading
 import os
 import mimetypes
+import uuid  # Import for generating unique filenames
 
 
 class SimpleHTTPServer:
@@ -29,7 +30,7 @@ class SimpleHTTPServer:
                         if not request:
                             break
 
-                        response = self.process_request(request)
+                        response = self.process_request(request, client_socket)
                         client_socket.sendall(response)
 
                         if b"Connection: close" in request:
@@ -51,22 +52,41 @@ class SimpleHTTPServer:
             num_connections = len(self.connections)
         return self.timeout_busy if num_connections > 5 else self.timeout_idle
 
-    def process_request(self, request):
+    def process_request(self, request, client_socket):
         """Process a single HTTP request and return the response."""
-        print("Received request:", request.decode())
-        
-        lines = request.decode().splitlines()
+        try:
+            decoded_request = request.decode(errors='ignore')
+            print("Received request:", decoded_request)
+        except UnicodeDecodeError:
+            print("Received non-UTF-8 request")
+            return self.build_response(400, "Bad Request")
+
+        lines = decoded_request.splitlines()
         if not lines:
             return self.build_response(400, "Bad Request")
 
         request_line = lines[0]
         method, path, _ = request_line.split()[:3]
 
+        headers = {}
+        for line in lines[1:]:
+            if ": " in line:
+                header, value = line.split(": ", 1)
+                headers[header] = value
+
         if method == "GET":
             return self.handle_get(path)
         
         elif method == "POST":
-            return self.handle_post()
+            # Retrieve Content-Length and keep reading until full content is received
+            content_length = int(headers.get("Content-Length", 0))
+            body = b""
+            while len(body) < content_length:
+                chunk = client_socket.recv(min(4096, content_length - len(body)))
+                if not chunk:  # Connection closed before full body was received
+                    break
+                body += chunk
+            return self.handle_post(body)
         
         else:
             return self.build_response(405, "Method Not Allowed")
@@ -93,10 +113,25 @@ class SimpleHTTPServer:
         else:
             return self.build_response(404, "Not Found", "404 Not Found")
 
-    def handle_post(self):
-        """Handle POST requests by acknowledging receipt."""
-        body = "POST request received"
-        return self.build_response(200, "OK", body)
+    def handle_post(self, body):
+        """Handle POST requests by saving the received data to a file."""
+        # Ensure the 'uploads' directory exists
+        upload_dir = "uploads"
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        # Generate a unique filename to prevent overwriting
+        filename = f"{uuid.uuid4()}.dat"
+        file_path = os.path.join(upload_dir, filename)
+        
+        # Write the received data to the file
+        with open(file_path, 'wb') as f:
+            f.write(body)
+        
+        print(f"POST data saved to {file_path}")
+
+        # Respond with a success message
+        response_body = f"File uploaded successfully as {filename}"
+        return self.build_response(200, "OK", response_body)
 
     def build_response(self, status_code, status_text, body="", content_type="text/html"):
         """Construct an HTTP response based on the status code and body."""
