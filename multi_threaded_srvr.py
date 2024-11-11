@@ -5,10 +5,10 @@ import mimetypes
 
 def serve_client(connectionSocket):
     # Set Timeout for each connectionSocket
-    with connectionSocket:
+    connectionSocket.settimeout(10)
+    try:
         while True:
             try:
-                connectionSocket.settimeout(60)
                 request = connectionSocket.recv(1024).decode('utf-8')
                 
                 if not request:
@@ -35,15 +35,18 @@ def serve_client(connectionSocket):
                         with open(filename, 'rb') as f:
                             file_data = f.read()
                         
-                        resBody = file_data
-                        response = (
-                            f"HTTP/1.1 200 OK\r\n"
-                            f"Client-ID: {client_id}\r\n"
-                            f"Content-Type: {content_type}\r\n"
-                            f"Content-Length: {len(resBody)}\r\n"
-                            f"Connection: keep-alive\r\n\r\n"
-                        )
-                        response = response.encode('utf-8') + resBody
+                        if(filename.endswith(".png")):
+                            response = file_data
+                        else:
+                            resBody = file_data
+                            response = (
+                                f"HTTP/1.1 200 OK\r\n"
+                                f"Client-ID: {client_id}\r\n"
+                                f"Content-Type: {content_type}\r\n"
+                                f"Content-Length: {len(resBody)}\r\n"
+                                f"Connection: keep-alive\r\n\r\n"
+                            )
+                            response = response.encode('utf-8') + resBody
                     else:
                         response = "HTTP/1.1 404 Not Found\r\n\r\n".encode('utf-8')
 
@@ -58,8 +61,9 @@ def serve_client(connectionSocket):
                     
                     # Receive file data for POST
                     file_data = connectionSocket.recv(4096)
-                    with open("uploaded_file.txt", 'wb') as f:
+                    with open(f"{path[1:]}", 'wb') as f:
                         f.write(file_data)
+                    response = "File uploaded successfully.".encode('utf-8')
 
                 # Handle other requests
                 else:
@@ -74,6 +78,7 @@ def serve_client(connectionSocket):
 
                 # Close the connection if not keep-alive
                 if headers.get("Connection", "").lower() != "keep-alive":
+                    print(f"Closing connection for client {client_id}.")
                     break
 
             except timeout:
@@ -84,7 +89,9 @@ def serve_client(connectionSocket):
                 print(f"Error: {e}")
                 break
 
-    connectionSocket.close()
+    finally:
+        print("Closing connection.")
+        connectionSocket.close()
 
 # Handle Server Connections
 def start_server(port=8080):
@@ -94,7 +101,7 @@ def start_server(port=8080):
     print(f"Server listening on port {port}")
 
     while True:
-        connectionSocket, addr = server.accept()   
+        connectionSocket, addr = server.accept()
         print(f"Accepted connection from {addr}")
         client_handler = threading.Thread(target=serve_client, args=(connectionSocket,))
         client_handler.start()

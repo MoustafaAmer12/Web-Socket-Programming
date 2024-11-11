@@ -11,7 +11,7 @@ def send_get_request(client_socket, path, client_id="TestClient"):
     )
     client_socket.sendall(request.encode('utf-8'))
     response = client_socket.recv(4096).decode('utf-8')
-    print(f"{client_id} GET response:\n", response)
+    print(f"{client_id} GET response:\n", response + "\n" + "_"*50 + "\n")
 
 def send_post_request(client_socket, path, data, client_id="TestClient"):
     request = (
@@ -21,9 +21,15 @@ def send_post_request(client_socket, path, data, client_id="TestClient"):
         f"Content-Length: {len(data)}\r\n"
         f"Connection: keep-alive\r\n\r\n"
     )
-    client_socket.sendall(request.encode('utf-8') + data)
+    client_socket.sendall(request.encode('utf-8'))
     response = client_socket.recv(4096).decode('utf-8')
-    print(f"{client_id} POST response:\n", response)
+    print(f"{client_id} POST response:\n", response + "\n" + "_"*50 + "\n")
+
+    client_socket.sendall(data)
+    file_ack = client_socket.recv(4096).decode('utf-8')
+    print(f"{client_id} File Post Acknowledgenent:\n", file_ack + "\n" + "_"*50 +   "\n")
+
+    
 
 def send_anonymous_request(client_socket, path, client_id):
     request = (
@@ -34,7 +40,7 @@ def send_anonymous_request(client_socket, path, client_id):
     )
     client_socket.sendall(request.encode('utf-8'))
     response = client_socket.recv(4096).decode('utf-8')
-    print("Anonymous request response:\n", response)
+    print(f"{client_id} Anonymous request:\n", response + "\n" + "_"*50 + "\n")
 
 def client_sequence(client_id):
     # Connect to the server
@@ -65,6 +71,9 @@ def client_sequence(client_id):
         
         # Send another GET request to ensure the connection persists
         send_anonymous_request(client_socket, "/get_test.txt", client_id)
+    
+    except Exception as e:
+        print(f"Error: {e}")
     
     finally:
         # Close the connection
