@@ -14,6 +14,27 @@ def send_get_request(client_socket, path):
     client_socket.sendall(request.encode('utf-8'))
 
 
+def read_file(file_path):
+    with open(file_path, 'rb') as f:
+        return f.read()
+
+# Function to send POST request to the server
+def send_post_request(client_socket, path, file_data, file_type):
+    headers = (
+        f"POST /{path} HTTP/1.1\r\n"
+        f"Host: 127.0.0.1\r\n"
+        f"Client-ID: {0}\r\n"
+        f"Content-Length: {len(file_data)}\r\n"
+        f"Connection: keep-alive\r\n\r\n"
+    )
+    client_socket.sendall(headers.encode('utf-8'))
+    response = client_socket.recv(4096).decode('utf-8')
+    print(f"POST response:\n{response}\n")
+
+    client_socket.sendall(file_data)
+    post_ack = client_socket.recv(4096)
+    print(f"File Post Acknowledgement:\n{post_ack.decode('utf-8')}\n")
+
 # Main client function
 def test_client():
     # Connect to the server
@@ -44,6 +65,19 @@ def test_client():
         file.write(response.decode('utf-8'))
     webbrowser.open("file://" + os.path.realpath("temp_page.html"))
     print(f"Received response for HTML file:\n{response[:50]}\n")
+
+    # Test POST requests for image, text, and HTML files
+    print("Sending POST request with a text file...")
+    text_data = read_file("input.txt")
+    send_post_request(client_socket, "post_text.txt", text_data, "text/plain")
+
+    print("Sending POST request with an image...")
+    image_data = read_file("pages/dummy.png")
+    send_post_request(client_socket, "post_image.png", image_data, "image/jpeg")
+
+    print("Sending POST request with an HTML file...")
+    html_data = read_file("pages/crc.html")
+    send_post_request(client_socket, "post_html.html", html_data, "text/html")
 
     # Close the connection
     client_socket.close()

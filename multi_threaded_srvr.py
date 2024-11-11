@@ -61,7 +61,7 @@ def serve_client(connectionSocket):
                     
                     # Receive file data for POST
                     file_data = connectionSocket.recv(4096)
-                    with open("uploaded_file.txt", 'wb') as f:
+                    with open(f"{path[1:]}", 'wb') as f:
                         f.write(file_data)
                     response = "File uploaded successfully.".encode('utf-8')
 
