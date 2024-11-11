@@ -35,15 +35,18 @@ def serve_client(connectionSocket):
                         with open(filename, 'rb') as f:
                             file_data = f.read()
                         
-                        resBody = file_data
-                        response = (
-                            f"HTTP/1.1 200 OK\r\n"
-                            f"Client-ID: {client_id}\r\n"
-                            f"Content-Type: {content_type}\r\n"
-                            f"Content-Length: {len(resBody)}\r\n"
-                            f"Connection: keep-alive\r\n\r\n"
-                        )
-                        response = response.encode('utf-8') + resBody
+                        if(filename.endswith(".png")):
+                            response = file_data
+                        else:
+                            resBody = file_data
+                            response = (
+                                f"HTTP/1.1 200 OK\r\n"
+                                f"Client-ID: {client_id}\r\n"
+                                f"Content-Type: {content_type}\r\n"
+                                f"Content-Length: {len(resBody)}\r\n"
+                                f"Connection: keep-alive\r\n\r\n"
+                            )
+                            response = response.encode('utf-8') + resBody
                     else:
                         response = "HTTP/1.1 404 Not Found\r\n\r\n".encode('utf-8')
 
